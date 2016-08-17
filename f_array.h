@@ -4,7 +4,6 @@
  * Support for custom Constructor/Destructor functions
  * David Bergeron c2016
  */
-
 #ifndef F_ARRAY_H
 #define F_ARRAY_H
 

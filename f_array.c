@@ -29,10 +29,11 @@ void f_ArrReserve( f_array_t *arr, int num )
     if ( (arr->next_idx + num) > arr->size ){
         char *tmpArr;
         while ( (arr->next_idx + num) > arr->size ){
-            if ( arr->size )
+            if ( arr->size ){
                 arr->size = 2 * arr->size;
-            else
+            } else {
                 arr->size = 8;
+            }
         }
         tmpArr = (char *) realloc(arr->data, arr->size * arr->icd.size );
         if (tmpArr == NULL) oom();
