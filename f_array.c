@@ -1,3 +1,9 @@
+/*
+ * FluxLib array.c
+ * For Convenient/Generic Array functions.
+ * Support for custom Constructor/Destructor functions
+ * David Bergeron c2016
+ */
 #include "f_array.h"
 
 f_array_t *f_ArrCustomNew( const f_icd *icd )
@@ -18,11 +24,6 @@ f_array_t *f_ArrNew( size_t size )
     return new;
 }
 
-/*
- *  f_ArrReserve():
- *  Ensures that num amount of extra slots are available.
- *  If not, doubles the size of the allocated memory array until num slots are free.
- */
 void f_ArrReserve( f_array_t *arr, int num )
 {
     if ( (arr->next_idx + num) > arr->size ){
@@ -39,10 +40,6 @@ void f_ArrReserve( f_array_t *arr, int num )
     }
 }
 
-/*
- *   If our arr has a custom destructor function, call it on each element.
- *   Then, free the arr memory array.
- */
 void f_ArrClear( f_array_t *arr )
 {
     if (arr->size){
@@ -63,19 +60,6 @@ void f_ArrFree( f_array_t *arr )
     free(arr);
 }
 
-/*
- *   if new size is smaller than current array:
- *       invoke destructor on extra elements.
- *   else:
- *       extend array
- *       call init function if appropriate
- *       else:
- *           memset new elements to 0. 
- *   NOTE: sets current arrIndex to last element meaning Append/Pop operations 
- *         will grab zero'd out elements if the resize has caused an extend.
- *         If you just want to extend memory, use f_ArrReserve.
- *         Most useful when you want to invoke init function on large number of elements.
- */
 void f_ArrResize( f_array_t *arr, size_t num )
 {
     size_t cur;
@@ -99,11 +83,6 @@ void f_ArrResize( f_array_t *arr, size_t num )
     arr->next_idx = num;
 }
 
-/*
- * f_ArrGet()
- * Returns pointer to item memory at desired index.
- * Make sure to cast to desired type.
- */
 char *f_ArrGet( f_array_t *arr, size_t idx )
 {
     if ( idx < arr->next_idx )
@@ -149,13 +128,7 @@ void f_ArrAppend( f_array_t *arr, const void *item)
             arr->next_idx++;
         }
 }
-/*
- * f_Arr_pop:
-    returns pointer to last element in arr, then shrinks arr by 1.
-    Important: If custom destructor function is used, PoP will return NULL.
-    If you need to use the pointer to the last value, make sure to use 
-    f_ArrGet first.
- */
+
 char *f_ArrPop(f_array_t *arr)
 {
     if (arr->icd.dtor){
@@ -189,13 +162,16 @@ void *f_ArrLast( f_array_t *arr )
 
 void *f_ArrNext( f_array_t *arr, void *p )
 {
-    if (p == NULL)
+    if (p == NULL){
         return f_ArrFirst(arr);
-    else{
-        if (arr->next_idx > f_ArrEltIdx(arr, p) + 1)
-            return f_ArrGet(arr, f_ArrEltIdx(arr, p) + 1);
-        else
-            return NULL;
+    }
+
+    int next_elt_idx = f_ArrEltIdx(arr, p) + 1;
+
+    if (arr->next_idx > next_elt_idx ){
+        return f_ArrGet(arr, next_elt_idx);
+    } else {
+        return NULL;
     }
 }
 void *f_ArrPrev( f_array_t *arr, void *p )
@@ -275,7 +251,7 @@ bool f_ArrContains( f_array_t *arr, void *item, bool (*cmp)(const void *, const 
     return false;
 }
 
-int f_ArrLen( f_array_t *arr)
+size_t f_ArrLen( f_array_t *arr)
 {
     return (int)arr->next_idx;
 }
@@ -290,12 +266,6 @@ bool f_ArrIsFull( f_array_t *arr)
     return (arr->next_idx >= arr->size);
 }
 
-/*
-   custom string copy/destruct functions.
- * f_Arr_strcpy()
-    cast src/dst to char** (string), copy string using strdup.
-   f_Arr_strdst()
- */
 void f_ArrStrcpy( void *dst, const void *src )
 {
     char **slot = (char**)dst;
