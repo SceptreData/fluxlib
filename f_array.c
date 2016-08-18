@@ -26,6 +26,8 @@ f_array_t *f_ArrNew( size_t size )
 
 void f_ArrReserve( f_array_t *arr, int num )
 {
+    /* If array does not have slots for num extra elts,
+     * double the size of the array. */
     if ( (arr->next_idx + num) > arr->size ){
         char *tmpArr;
         while ( (arr->next_idx + num) > arr->size ){
@@ -44,6 +46,7 @@ void f_ArrReserve( f_array_t *arr, int num )
 void f_ArrClear( f_array_t *arr )
 {
     if (arr->size){
+        /* Call custom Destructor on each elt if necessary */
         if (arr->icd.dtor){
             unsigned cur;
             for ( cur = 0; cur < arr->next_idx; cur++) {
@@ -64,6 +67,8 @@ void f_ArrFree( f_array_t *arr )
 void f_ArrResize( f_array_t *arr, size_t num )
 {
     size_t cur;
+
+    /* if shrinking our array, call custom destructor if necessary */
     if ( arr->next_idx > num ){
         if (arr->icd.dtor) {
             for ( cur = num; cur < arr->next_idx; cur++){
@@ -71,14 +76,18 @@ void f_ArrResize( f_array_t *arr, size_t num )
             }
         }
     }
-    else if ( arr->next_idx < (size_t)num ){
+    else if ( arr->next_idx < num ){
         f_ArrReserve(arr, num - arr->next_idx);
+        /* Call custom init function if necessary */
         if ( arr->icd.init ){
             for ( cur = arr->next_idx; cur < num; cur++){
                 arr->icd.init(f_ArrGet(arr, cur));
             }
         } else {
-            memset(f_ArrGet(arr, arr->next_idx), 0, arr->icd.size * (num - arr->next_idx));
+            /* zero out new values if no custom constructor */
+            char *memblock = f_ArrGet(arr, arr->next_idx);
+            int block_size = arr->icd.size * (num - arr->next_idx);
+            memset(memblock, 0, block_size);
         }
     }
     arr->next_idx = num;
@@ -105,10 +114,13 @@ void f_ArrInsert( f_array_t *arr, void *item, size_t idx)
         size_t memblock_size = (arr->next_idx - idx) * arr->icd.size;
         memmove(old_slot, new_slot, memblock_size);
     }
+
+    char *item_slot = f_ArrGet(arr, idx);
+    /* Call custom constructor if applicable */
     if (arr->icd.copy){
-        arr->icd.copy(f_ArrGet(arr, idx), item);
+        arr->icd.copy(item_slot, item);
     } else {
-        memcpy(f_ArrGet(arr, idx), item, arr->icd.size);
+        memcpy(item_slot, item, arr->icd.size);
     }
     arr->next_idx++;
 }
@@ -120,22 +132,26 @@ void f_ArrPush( f_array_t *arr, void *item )
 
 void f_ArrAppend( f_array_t *arr, const void *item)
 {
-        f_ArrReserve(arr, 1);
-        if( arr->icd.copy ){
-            arr->icd.copy(f_ArrGet(arr, arr->next_idx++), item);
-        } else {
-            char *mem_slot = f_ArrGet(arr, arr->next_idx);
-            memcpy(mem_slot, item, arr->icd.size);
-            arr->next_idx++;
-        }
+    f_ArrReserve(arr, 1);
+
+    /* Call custom constructor if applicable */
+    if( arr->icd.copy ){
+        arr->icd.copy(f_ArrGet(arr, arr->next_idx++), item);
+    } else {
+        char *mem_slot = f_ArrGet(arr, arr->next_idx);
+        memcpy(mem_slot, item, arr->icd.size);
+        arr->next_idx++;
+    }
 }
 
 char *f_ArrPop(f_array_t *arr)
 {
+    /* Call custom destructor if applicable. */
     if (arr->icd.dtor){
         arr->icd.dtor( f_ArrGet( arr, arr->next_idx - 1));
         arr->next_idx--;
         return NULL;
+    /* Otherwise return pointer to popped element */
     } else {
         char *p = f_ArrGet(arr, arr->next_idx - 1);
         arr->next_idx--;
@@ -191,12 +207,15 @@ void *f_ArrPrev( f_array_t *arr, void *p )
 
 void f_ArrEraseN( f_array_t *arr, int pos, int len )
 {
+    /* Call custom destructor if applicable */
     if( arr->icd.dtor ){
         size_t j;
         for( j = 0; j < len; j++){
             arr->icd.dtor(f_ArrGet(arr, j + pos));
         }
     }
+
+    /* If not erasing to the end of the array, shift extra elements */
     if (arr->next_idx > (pos + len)){
         char *dst_block = f_ArrGet(arr, pos);
         char *src_block = f_ArrGet(arr, pos + len);
@@ -213,12 +232,14 @@ f_array_t *f_ArrCopy( f_array_t *arr )
         oom();
     }
 
+    /* Allocate data memory for our new array */
     size_t memblock_size = (arr->size * arr->icd.size );
     new_arr->data = malloc( memblock_size );
     if (new_arr->data == NULL){
         oom();
     }
-
+    
+    /* Copy Data from old array into new one */
     memcpy(new_arr->data, arr->data, memblock_size);
     new_arr->next_idx = arr->next_idx;
     new_arr->size = arr->size;
