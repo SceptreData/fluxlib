@@ -5,9 +5,9 @@
  */
 #include "f_array.h"
 
-#define MemoryError() do{                                                             \
-    printf("Memory Error. File: %s Line: %d", __FILE__, __LINE__);            \
-    exit(0);                                                                  \
+#define MemoryError() do{                                           \
+    printf("Memory Error. File: %s Line: %d", __FILE__, __LINE__);  \
+    exit(0);                                                        \
 }while(0);
 
 f_array_t *f_ArrCustomNew( const f_icd *icd )
