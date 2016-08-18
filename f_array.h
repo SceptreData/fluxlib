@@ -2,7 +2,6 @@
  * FluxLib Array.h
  * For Convenient/Generic Array functions.
  * Support for custom Constructor/Destructor functions
- * David Bergeron c2016
  */
 #ifndef F_ARRAY_H
 #define F_ARRAY_H
@@ -11,11 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-
-#define oom() do{                                                             \
-    printf("Memory Error. File: %s Line: %d", __FILE__, __LINE__);            \
-    exit(0);                                                                  \
-}while(0);
 
 typedef void (init_f)(void *func);
 typedef void (ctor_f)(void *dst, const void *src);
