@@ -2,18 +2,24 @@
  * FluxLib array.c
  * For Convenient/Generic Array functions.
  * Support for custom Constructor/Destructor functions
- * David Bergeron c2016
  */
 #include "f_array.h"
+
+#define MemoryError() do{                                           \
+    printf("Memory Error. File: %s Line: %d", __FILE__, __LINE__);  \
+    exit(0);                                                        \
+}while(0);
 
 f_array_t *f_ArrCustomNew( const f_icd *icd )
 {
     f_array_t *arr = malloc(sizeof(f_array_t));
-    if ( arr == NULL ) oom();
+    if ( arr == NULL )
+        MemoryError();
     arr->next_idx = 0;
     arr->size = 0;
     arr->icd = *icd;
     arr->data = NULL;
+
     return arr;
 }
 
@@ -21,15 +27,16 @@ f_array_t *f_ArrNew( size_t size )
 {
     f_icd icd = {size, NULL, NULL, NULL};
     f_array_t *new = f_ArrCustomNew( &icd );
+
     return new;
 }
 
 void f_ArrReserve( f_array_t *arr, int num )
 {
-    /* If array does not have slots for num extra elts,
+    /* If array does not have space for an additional 'num' elements,
      * double the size of the array. */
     if ( (arr->next_idx + num) > arr->size ){
-        char *tmpArr;
+        char *tmp_arr;
         while ( (arr->next_idx + num) > arr->size ){
             if ( arr->size ){
                 arr->size = 2 * arr->size;
@@ -37,16 +44,17 @@ void f_ArrReserve( f_array_t *arr, int num )
                 arr->size = 8;
             }
         }
-        tmpArr = (char *) realloc(arr->data, arr->size * arr->icd.size );
-        if (tmpArr == NULL) oom();
-        arr->data = tmpArr;
+        tmp_arr = (char *) realloc(arr->data, arr->size * arr->icd.size );
+        if (tmp_arr == NULL)
+            MemoryError();
+        arr->data = tmp_arr;
     }
 }
 
 void f_ArrClear( f_array_t *arr )
 {
     if (arr->size){
-        /* Call custom Destructor on each elt if necessary */
+        /* Call custom destructor on each element if applicable*/
         if (arr->icd.dtor){
             unsigned cur;
             for ( cur = 0; cur < arr->next_idx; cur++) {
@@ -106,8 +114,11 @@ void f_ArrInsert( f_array_t *arr, void *item, size_t idx)
     if (idx > arr->next_idx){
         f_ArrResize(arr, idx);
     }
-
+    /* Ensure space exists in Array for additional element. */
     f_ArrReserve(arr, 1);
+    
+    /* If inserting element in the middle of the array, shift affected values
+     * over by 1 to make space.   */
     if (idx < arr->next_idx){
         char *old_slot = f_ArrGet(arr, idx + 1);
         char *new_slot = f_ArrGet(arr, idx);
@@ -136,8 +147,9 @@ void f_ArrAppend( f_array_t *arr, const void *item)
 
     /* Call custom constructor if applicable */
     if( arr->icd.copy ){
-        arr->icd.copy(f_ArrGet(arr, arr->next_idx++), item);
+        arr->icd.copy( f_ArrGet(arr, arr->next_idx++), item );
     } else {
+    /* otherwise copy item into our memory slot. */
         char *mem_slot = f_ArrGet(arr, arr->next_idx);
         memcpy(mem_slot, item, arr->icd.size);
         arr->next_idx++;
@@ -184,7 +196,6 @@ void *f_ArrNext( f_array_t *arr, void *p )
     }
 
     int next_elt_idx = f_ArrEltIdx(arr, p) + 1;
-
     if (arr->next_idx > next_elt_idx ){
         return f_ArrGet(arr, next_elt_idx);
     } else {
@@ -229,14 +240,14 @@ f_array_t *f_ArrCopy( f_array_t *arr )
 {
     f_array_t *new_arr = f_ArrCustomNew( &(arr->icd) );
     if ( new_arr == NULL ){
-        oom();
+        MemoryError();
     }
 
-    /* Allocate data memory for our new array */
+    /* Allocate memory for our new array */
     size_t memblock_size = (arr->size * arr->icd.size );
     new_arr->data = malloc( memblock_size );
     if (new_arr->data == NULL){
-        oom();
+        MemoryError();
     }
     
     /* Copy Data from old array into new one */
@@ -256,11 +267,11 @@ void *f_ArrSearch( f_array_t *arr, void *value, int (*cmp)() )
 {
     return bsearch( value, arr->data, arr->next_idx, arr->icd.size, cmp );
 }
+
 /*
  * Iterate through arr using *next.
  * O(n) time vs O(log_n) for search.
  */
-
 bool f_ArrContains( f_array_t *arr, void *item, bool (*cmp)(const void *, const  void *))
 {
     void *p = NULL;
