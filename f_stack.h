@@ -16,18 +16,28 @@
 typedef struct Stack_s{
     void **top;
     void **bottom;
+    int capacity;
 } Stack_t;
 
 #define StackNew(s,_size) do{                                       \
     (s) = malloc(sizeof(Stack_t));                                  \
     if((s) == NULL)                                                 \
         MemoryError();                                              \
-    (s)->top = (s)->bottom = malloc(sizeof(void*) * _size);          \
+    (s)->capacity = _size;                                          \
+    (s)->top = (s)->bottom = malloc(sizeof(void*) * _size);         \
+    if((s)->top == NULL)                                            \
+        MemoryError();                                              \
 } while(0);
+
+static inline int StackLen( Stack_t *s )
+{
+    return ((uintptr_t)s->top - (uintptr_t)s->bottom) / sizeof(void *);
+}
 
 static inline void StackPush( Stack_t *s, void *data )
 {
-    *s->top++ = data;
+    if(StackLen(s) != s->capacity)
+        *s->top++ = data;
 }
 
 static inline void *StackPeek( Stack_t *s )
@@ -38,10 +48,5 @@ static inline void *StackPeek( Stack_t *s )
 static inline void *StackPop( Stack_t *s )
 {
     return (s->top == s->bottom) ? NULL: *(--s->top);
-}
-
-static inline int StackLen( Stack_t *s )
-{
-    return ((uintptr_t)s->top - (uintptr_t)s->bottom) / sizeof(void *);
 }
 #endif
