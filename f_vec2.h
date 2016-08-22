@@ -1,6 +1,10 @@
 #ifndef F_VEC2_H
 #define F_VEC2_H
-
+/*  f_vec2.h
+ *  David Bergeron 2016
+ *  Small home-cooked 2d vector library. Return value passed to the function
+ *  as a paramater to ensure minimum overhead.
+ */
 #include <stdio.h>
 #include <stdbool.h>  
 #include <math.h>
@@ -11,7 +15,7 @@ typedef struct vec2_s{
 
 static inline void Vec2Clone( vec2_t *clone, vec2_t *old_v )
 {
-    clone = old_v;
+    *clone = *old_v;
 }
 
 static inline void Vec2Add( vec2_t *r, vec2_t *a, vec2_t *b)
